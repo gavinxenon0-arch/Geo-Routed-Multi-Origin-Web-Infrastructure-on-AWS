@@ -1,0 +1,49 @@
+'use strict';
+
+const ORIGIN_BR = '${origin_br}';
+const ORIGIN_DEFAULT = '${origin_default}';
+const ORIGIN_VERIFY = '${origin_verify}';
+
+exports.handler = async (event) => {
+  const request = event.Records[0].cf.request;
+  const headers = request.headers || {};
+
+  const country =
+    headers['cloudfront-viewer-country'] &&
+    headers['cloudfront-viewer-country'][0] &&
+    headers['cloudfront-viewer-country'][0].value
+      ? headers['cloudfront-viewer-country'][0].value
+      : '';
+
+  const originDomain = country === 'BR' ? ORIGIN_BR : ORIGIN_DEFAULT;
+
+  request.origin = {
+    custom: {
+      domainName: originDomain,
+      port: 80,
+      protocol: 'http',
+      path: '',
+      sslProtocols: ['TLSv1.2'],
+      readTimeout: 30,
+      responseCompletionTimeout: 30,
+      keepaliveTimeout: 5,
+      customHeaders: {
+        'x-origin-verify': [
+          {
+            key: 'X-Origin-Verify',
+            value: ORIGIN_VERIFY
+          }
+        ]
+      }
+    }
+  };
+
+  request.headers['host'] = [
+    {
+      key: 'Host',
+      value: originDomain
+    }
+  ];
+
+  return request;
+};
