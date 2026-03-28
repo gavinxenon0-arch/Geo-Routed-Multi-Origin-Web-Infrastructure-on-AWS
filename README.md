@@ -150,88 +150,79 @@ After deployment, grab the CloudFront domain from Terraform output and open it i
 It should look like:
 
 https://xxxxxxxxxxxx.cloudfront.net
-# Testing
-1) Go to the cloudfront link and it should take you the US Server
 
-2) To test the Brazil Origin, Get UrbanVPN and set it to Brazil
+---
 
-3) This changes your IP to simulate the IP of someone in brazil and now you can access the Brazil server
+## 🧪 Validation & Testing
 
-4) Proving the edge function works
+To verify that the **Lambda@Edge** routing logic is correctly identifying viewer location and dynamically shifting origins, follow these steps:
 
-## Expected behavior
+### **1. Establish a Baseline (US Origin)**
+Access the CloudFront distribution link directly from your browser. Since the default routing points to the North American region, you will be directed to the **US Server**.
 
-Users hit a single CloudFront endpoint
+### **2. Simulate Global Traffic (Brazil Origin)**
+To test the geo-routing logic, you need to simulate a request originating from South America:
+* **Action:** Enable a VPN (such as **UrbanVPN**) and set your exit node to **Brazil**.
+* **Result:** This changes your request metadata to reflect a Brazilian IP address.
 
-Lambda@Edge chooses the origin based on viewer location
+### **3. Verify Edge Execution**
+Refresh the CloudFront URL. The Lambda@Edge function intercepts the request, identifies the `CloudFront-Viewer-Country` header as `BR`, and dynamically rewrites the origin request to the **Brazil ALB**.
 
-Traffic is forwarded to either:
+> **✅ Success Criteria:** You should now see the unique web content served from the Brazil-based EC2 instance, proving the global traffic management and edge logic are fully functional.
 
-Brazil ALB
+---
 
-US/default ALB
+## 🚀 Expected Behavior
 
-Each ALB forwards to its attached EC2 instance
+1. **Global Entry Point:** Users hit a single **CloudFront** distribution endpoint.
+2. **Edge Logic:** A **Lambda@Edge** function intercepts the request and evaluates the viewer's location.
+3. **Dynamic Routing:** Traffic is intelligently forwarded to the appropriate regional backend:
+    * 🇧🇷 **Brazil Origin:** Routed to the Brazil Application Load Balancer (ALB).
+    * 🇺🇸 **US / Default Origin:** Routed to the US Application Load Balancer (ALB).
+4. **Processing:** Each ALB forwards traffic to its dedicated **EC2 instance**, serving a region-specific response.
 
-The returned page differs depending on the routed backend
+---
 
-## Tear down
+## ♻️ Tear Down
 
-To remove the infrastructure:
+To decommission the infrastructure and avoid unnecessary AWS costs, navigate to the root directory containing `main.tf` and run:
 
-Run
-
+```bash
 terraform destroy
+```
 
-In the Root Directory with the main.tf,var.tf,output.tf
+## 🛡️ Security Architecture
 
-## Security notes
+* **Edge Defense:** CloudFront serves as the hardened public entry point.
+* **Identity & Access:** Granular **IAM Roles** power the Lambda@Edge execution.
+* **Network Isolation:** Tiered **Security Groups** protect both the ALBs and the EC2 instances.
+* **Path Separation:** Logic-based routing ensures backend origins remain isolated.
 
-This project uses:
+---
 
-Security groups for ALB and EC2
+## 🏗️ Production Roadmap (Current Demo Limitations)
 
-CloudFront as the public global entry point
+*This project is built as a portfolio-ready proof of concept. To transition to a full-scale production environment, the following enhancements are recommended:*
 
-IAM role for Lambda@Edge
+* **Enhanced Lockdown:** Restrict EC2 HTTP traffic strictly to ALB Security Group IDs.
+* **Access Control:** Replace open SSH with **AWS Systems Manager (SSM)** or a Bastion host.
+* **Encryption:** Implement **HTTPS** on ALBs and attach a custom domain via **AWS Certificate Manager (ACM)**.
+* **Edge Security:** Deploy **AWS WAF** in front of CloudFront to mitigate Layer 7 attacks.
+* **High Availability:** Replace single-instance EC2s with **Auto Scaling Groups (ASG)**.
+* **Observability:** Integrate structured logging (CloudWatch) and real-time alerting.
 
-Route-based separation of backend origins
+---
 
-# Current demo-style limitations
+## 🧠 Engineering Challenges & Solutions
 
-This is intentionally built as a portfolio/demo architecture, so there are a few production improvements that could be added later:
+| Problem | Technical Resolution |
+| :--- | :--- |
+| **Lambda@Edge Packaging** | Automated the build process to render and **ZIP** JavaScript templates into deployable artifacts during the Terraform apply. |
+| **Origin Rewriting** | Configured **CloudFront Origin Request** events to handle custom routing logic that native CloudFront behaviors don't support out-of-the-box. |
+| **Geo-Location Precision** | Optimized **Cache & Origin Request Policies** to ensure CloudFront viewer headers (like `CloudFront-Viewer-Country`) are correctly forwarded. |
+| **State Management** | Implemented an **S3 Backend** for Terraform with considerations for local lockfile synchronization across different workflows. |
 
-Restrict EC2 HTTP access to only the ALB security group
-
-Move SSH access behind a tighter CIDR or bastion/SSM
-
-Add HTTPS on the ALBs
-
-Add a custom domain with ACM instead of default CloudFront certificate
-
-Add AWS WAF in front of CloudFront
-
-Add structured logging and alerting
-
-Add autoscaling groups instead of single instances
-
-# Problems encountered
-
-1. Lambda@Edge packaging
-
-Lambda@Edge requires a deployable zip artifact, so the JavaScript template is rendered and zipped before deployment.
-
-2. CloudFront origin rewriting
-
-CloudFront can declare multiple origins, but the routing logic still has to be handled in Lambda@Edge during the origin-request event.
-
-3. Viewer location routing
-
-Routing decisions depend on forwarded CloudFront viewer headers, so cache and origin request policies must be configured correctly.
-
-4. State/backend workflow
-
-The backend is stored in S3, and local lockfile behavior may require adjustment depending on workflow.
+---
 
 ## 🚀 Why This Project Matters
 
