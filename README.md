@@ -141,7 +141,7 @@ terraform {
 ```
 5. cd Geo-Routed-Multi-Origin-Web-Infrastructure-on-AWS/scripts
 ```text
-In the terminal, run ./quick-apply.sh
+In the terminal, run ./quick-run.sh
 ```
 
 
