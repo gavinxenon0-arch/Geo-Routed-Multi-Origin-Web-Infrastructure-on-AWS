@@ -159,56 +159,79 @@ https://xxxxxxxxxxxx.cloudfront.net
 
 4) Proving the edge function works
 
-## 🚀 Expected Behavior
+## Expected behavior
 
-1. **Global Entry Point:** Users hit a single **CloudFront** distribution endpoint.
-2. **Edge Logic:** A **Lambda@Edge** function intercepts the request and evaluates the viewer's location.
-3. **Dynamic Routing:** Traffic is intelligently forwarded to the appropriate regional backend:
-    * 🇧🇷 **Brazil Origin:** Routed to the Brazil Application Load Balancer (ALB).
-    * 🇺🇸 **US / Default Origin:** Routed to the US Application Load Balancer (ALB).
-4. **Processing:** Each ALB forwards traffic to its dedicated **EC2 instance**, serving a region-specific response.
+Users hit a single CloudFront endpoint
 
----
+Lambda@Edge chooses the origin based on viewer location
 
-## 🛡️ Security Architecture
+Traffic is forwarded to either:
 
-* **Edge Defense:** CloudFront serves as the hardened public entry point.
-* **Identity & Access:** Granular **IAM Roles** power the Lambda@Edge execution.
-* **Network Isolation:** Tiered **Security Groups** protect both the ALBs and the EC2 instances.
-* **Path Separation:** Logic-based routing ensures backend origins remain isolated.
+Brazil ALB
 
----
+US/default ALB
 
-## 🏗️ Production Roadmap (Current Demo Limitations)
+Each ALB forwards to its attached EC2 instance
 
-*This project is built as a portfolio-ready proof of concept. To transition to a full-scale production environment, the following enhancements are recommended:*
+The returned page differs depending on the routed backend
 
-* **Enhanced Lockdown:** Restrict EC2 HTTP traffic strictly to ALB Security Group IDs.
-* **Access Control:** Replace open SSH with **AWS Systems Manager (SSM)** or a Bastion host.
-* **Encryption:** Implement **HTTPS** on ALBs and attach a custom domain via **AWS Certificate Manager (ACM)**.
-* **Edge Security:** Deploy **AWS WAF** in front of CloudFront to mitigate Layer 7 attacks.
-* **High Availability:** Replace single-instance EC2s with **Auto Scaling Groups (ASG)**.
-* **Observability:** Integrate structured logging (CloudWatch) and real-time alerting.
+## Tear down
 
----
+To remove the infrastructure:
 
-## 🧠 Engineering Challenges & Solutions
+Run
 
-| Problem | Technical Resolution |
-| :--- | :--- |
-| **Lambda@Edge Packaging** | Automated the build process to render and **ZIP** JavaScript templates into deployable artifacts during the Terraform apply. |
-| **Origin Rewriting** | Configured **CloudFront Origin Request** events to handle custom routing logic that native CloudFront behaviors don't support out-of-the-box. |
-| **Geo-Location Precision** | Optimized **Cache & Origin Request Policies** to ensure CloudFront viewer headers (like `CloudFront-Viewer-Country`) are correctly forwarded. |
-| **State Management** | Implemented an **S3 Backend** for Terraform with considerations for local lockfile synchronization across different workflows. |
-
----
-
-## ♻️ Tear Down
-
-To decommission the infrastructure and avoid unnecessary AWS costs, navigate to the root directory containing `main.tf` and run:
-
-```bash
 terraform destroy
+
+In the Root Directory with the main.tf,var.tf,output.tf
+
+## Security notes
+
+This project uses:
+
+Security groups for ALB and EC2
+
+CloudFront as the public global entry point
+
+IAM role for Lambda@Edge
+
+Route-based separation of backend origins
+
+# Current demo-style limitations
+
+This is intentionally built as a portfolio/demo architecture, so there are a few production improvements that could be added later:
+
+Restrict EC2 HTTP access to only the ALB security group
+
+Move SSH access behind a tighter CIDR or bastion/SSM
+
+Add HTTPS on the ALBs
+
+Add a custom domain with ACM instead of default CloudFront certificate
+
+Add AWS WAF in front of CloudFront
+
+Add structured logging and alerting
+
+Add autoscaling groups instead of single instances
+
+# Problems encountered
+
+1. Lambda@Edge packaging
+
+Lambda@Edge requires a deployable zip artifact, so the JavaScript template is rendered and zipped before deployment.
+
+2. CloudFront origin rewriting
+
+CloudFront can declare multiple origins, but the routing logic still has to be handled in Lambda@Edge during the origin-request event.
+
+3. Viewer location routing
+
+Routing decisions depend on forwarded CloudFront viewer headers, so cache and origin request policies must be configured correctly.
+
+4. State/backend workflow
+
+The backend is stored in S3, and local lockfile behavior may require adjustment depending on workflow.
 
 ## 🚀 Why This Project Matters
 
