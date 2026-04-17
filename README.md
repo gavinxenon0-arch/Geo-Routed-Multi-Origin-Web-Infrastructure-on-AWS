@@ -9,8 +9,8 @@
 
 <!-- Geo-Routed-Multi-Origin-Web-Infrastructure-on-AWS  -->
 
+<img width="1105" height="683" alt="image" src="https://github.com/user-attachments/assets/a5e85c86-2b37-4886-881a-6cca03355c5f" />
 
-<img width="1407" height="768" alt="trio" src="https://github.com/user-attachments/assets/257180ff-d39d-4094-b56e-fec975e87fe9" />
 
 <br/>
 <br/>
